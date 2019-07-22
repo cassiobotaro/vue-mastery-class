@@ -1,3 +1,5 @@
+var eventBus = new Vue()
+
 Vue.component('product', {
     props: {
         premium:{
@@ -6,41 +8,42 @@ Vue.component('product', {
         }
     },
     template: `
-        <div class="product">
+         <div class="product">
+
             <div class="product-image">
-                <img :src="image"/>
+              <img :src="image">
             </div>
+
             <div class="product-info">
-                <h1>{{ title }}</h1>
+                <h1>{{ product }}</h1>
                 <p v-if="inStock">In Stock</p>
                 <p v-else>Out of Stock</p>
                 <p>Shipping: {{ shipping }}</p>
+
                 <ul>
-                    <li v-for="detail in details">{{ detail }}</li>
+                  <li v-for="(detail, index) in details" :key="index">{{ detail }}</li>
                 </ul>
-                <div v-for="(variant, index) in variants"
-                    :key="variant.variantId"
-                    class="color-box"
-                    :style="{ backgroundColor: variant.variantColor}"
-                    @mouseover="updateProduct(index)" >
+
+                <div class="color-box"
+                     v-for="(variant, index) in variants"
+                     :key="variant.variantId"
+                     :style="{ backgroundColor: variant.variantColor }"
+                     @mouseover="updateProduct(index)"
+                     >
                 </div>
+
                 <button @click="addToCart"
-                    :disabled="!inStock"
-                    :class="{disabledButton: !inStock}">Add to cart</button>
-            </div>
-            <div>
-                <h2>Reviews</h2>
-                <p v-if="!reviews.length">There are no reviews yet.</p>
-                <ul>
-                    <li v-for="review in reviews">
-                        <p>{{ review.name }}</p>
-                        <p>{{ review.rating }}</p>
-                        <p>{{ review.review }}</p>
-                    </li>
-                </ul>
-            </div>
-            <product-review @review-submitted="addReview"></product-review>
-        </div>
+                  :disabled="!inStock"
+                  :class="{ disabledButton: !inStock }"
+                  >
+                Add to cart
+                </button>
+
+             </div>
+
+            <product-tabs :reviews="reviews"></product-tabs>
+
+          </div>
     `,
     data() {
         return {
@@ -71,9 +74,6 @@ Vue.component('product', {
         },
         updateProduct(index){
             this.selectedVariant = index
-        },
-        addReview(productReview){
-            this.reviews.push(productReview)
         }
     },
     computed: {
@@ -92,8 +92,12 @@ Vue.component('product', {
             }
             return 2.99
         }
+    },
+    mounted(){
+        eventBus.$on('review-submitted', productReview => {
+            this.reviews.push(productReview)
+        })
     }
-
 })
 
 Vue.component('product-review', {
@@ -109,12 +113,12 @@ Vue.component('product-review', {
         <label for="name">Name:</label>
         <input id="name" v-model="name" placeholder="name">
       </p>
-      
+
       <p>
-        <label for="review">Review:</label>      
+        <label for="review">Review:</label>
         <textarea id="review" v-model="review"></textarea>
       </p>
-      
+
       <p>
         <label for="rating">Rating:</label>
         <select id="rating" v-model.number="rating">
@@ -125,11 +129,11 @@ Vue.component('product-review', {
           <option>1</option>
         </select>
       </p>
-          
+
       <p>
-        <input type="submit" value="Submit">  
-      </p>    
-    
+        <input type="submit" value="Submit">
+      </p>
+
     </form>
     `,
     data(){
@@ -148,7 +152,7 @@ Vue.component('product-review', {
                     review: this.review,
                     rating: this.rating
                 }
-                this.$emit('review-submitted', productReview)
+                eventBus.$emit('review-submitted', productReview)
                 this.name = null
                 this.review = null
                 this.rating = null
@@ -157,7 +161,43 @@ Vue.component('product-review', {
                 if(!this.reviw) this.errors.push("Review required.")
                 if(!this.rating) this.errors.push("Rating required.")
             }
-            
+        }
+    }
+})
+
+Vue.component('product-tabs', {
+    props: {
+        reviews:{
+            type: Array,
+            required: true
+        }
+    },
+    template: `
+    <div>
+        <span class="tab"
+        :class="{ activeTab: selectedTab === tab}"
+        v-for="(tab, index) in tabs"
+        :key="index"
+        @click="selectedTab = tab">
+        {{ tab }}</span>
+
+        <div v-show="selectedTab == 'Reviews'">
+            <p v-if="!reviews.length">There are no reviews yet.</p>
+            <ul v-else>
+                <li v-for="(review, index) in reviews" :key="index">
+                    <p>{{ review.name }}</p>
+                    <p>Rating: {{ review.rating }}</p>
+                    <p>{{ review.review }}</p>
+                </li>
+            </ul>
+        </div>
+        <product-review v-show="selectedTab == 'Make a Review'"></product-review>
+    </div>
+    `,
+    data() {
+        return {
+            tabs: ['Reviews', 'Make a Review'],
+            selectedTab: 'Reviews'
         }
     }
 })
